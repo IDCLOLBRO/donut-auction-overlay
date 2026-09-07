@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "donutauction",
+  "version": "${version}",
+  "name": "Donut Auction Overlay",
+  "description": "Client-side auction overlay that tracks the highest bid from chat payments.",
+  "authors": ["IDCLOLBRO"],
+  "license": "CC0-1.0",
+  "environment": "client",
+  "entrypoints": { "client": ["com.donutauction.mod.DonutAuctionClient"] },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
