@@ -55,22 +55,20 @@ public class DonutAuctionClient implements ClientModInitializer {
 
             if (moveMode && client.currentScreen == null) {
                 boolean changed = false;
-                long handle = client.getWindow().getHandle();
-
-                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_LEFT)) {
+                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_LEFT)) {
                     CONFIG.hudX = Math.max(0, AuctionHud.getX() - 2);
                     changed = true;
                 }
-                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_RIGHT)) {
+                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_RIGHT)) {
                     CONFIG.hudX = Math.min(client.getWindow().getScaledWidth() - AuctionHud.WIDTH,
                             AuctionHud.getX() + 2);
                     changed = true;
                 }
-                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_UP)) {
+                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_UP)) {
                     CONFIG.hudY = Math.max(0, CONFIG.hudY - 2);
                     changed = true;
                 }
-                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_DOWN)) {
+                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_DOWN)) {
                     CONFIG.hudY = Math.min(client.getWindow().getScaledHeight() - AuctionHud.HEIGHT,
                             CONFIG.hudY + 2);
                     changed = true;
