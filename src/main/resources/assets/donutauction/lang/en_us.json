@@ -1,4 +1,5 @@
 {
-  "key.donutauction.toggle": "Toggle Auction Overlay",
+  "key.donutauction.toggle": "Start / End Auction",
+  "key.donutauction.move": "Move Auction Overlay",
   "category.donutauction": "Donut Auction Overlay"
 }
