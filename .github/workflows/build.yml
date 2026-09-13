@@ -12,11 +12,15 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: 'current'
       - name: Build
-        run: gradle build --no-daemon
+        run: gradle build --no-daemon --stacktrace
+      - name: Verify release jar
+        run: |
+          ls -lah build/libs
+          test -f build/libs/donut-auction-overlay-1.0.0.jar
+          test $(stat -c%s build/libs/donut-auction-overlay-1.0.0.jar) -gt 10000
       - uses: actions/upload-artifact@v7
         with:
-          name: donut-auction-overlay
-          path: build/libs/*.jar
+          name: donut-auction-overlay-jar
+          path: build/libs/donut-auction-overlay-1.0.0.jar
+          if-no-files-found: error
