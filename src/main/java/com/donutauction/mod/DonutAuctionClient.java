@@ -11,7 +11,6 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 import java.util.Locale;
 
@@ -19,8 +18,7 @@ public class DonutAuctionClient implements ClientModInitializer {
     public static final AuctionState STATE = new AuctionState();
     public static AuctionConfig CONFIG;
     private static KeyBinding toggleKey;
-    private static final KeyBinding.Category CATEGORY =
-            KeyBinding.Category.register(Identifier.of("donutauction", "auction"));
+    private static final KeyBinding.Category CATEGORY = KeyBinding.Category.MISC;
 
     @Override
     public void onInitializeClient() {
