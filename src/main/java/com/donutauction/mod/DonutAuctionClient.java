@@ -21,9 +21,10 @@ public class DonutAuctionClient implements ClientModInitializer {
 
     private static KeyBinding toggleKey;
     private static KeyBinding moveKey;
-    private static final KeyBinding.Category CATEGORY = KeyBinding.Category.MISC;
-
+    private static boolean moveMode = false;
     private static int pendingTimeLimitSeconds = 0;
+
+    private static final KeyBinding.Category CATEGORY = KeyBinding.Category.MISC;
 
     @Override
     public void onInitializeClient() {
@@ -38,17 +39,50 @@ public class DonutAuctionClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             STATE.tick();
 
-            if (STATE.isExpired()) {
-                endAuction(client, "Time is up!");
-            }
+            if (STATE.isExpired()) endAuction(client, "Time is up!");
 
             while (toggleKey.wasPressed()) handleToggle(client);
+
             while (moveKey.wasPressed()) {
-                if (client.currentScreen == null) client.setScreen(new AuctionMoveScreen());
+                moveMode = !moveMode;
+                CONFIG.save();
+                sendClientMessage(client,
+                        moveMode
+                                ? "Move mode ON — use the arrow keys to move the overlay, then press G to save."
+                                : "Overlay position saved.",
+                        moveMode ? Formatting.AQUA : Formatting.GREEN);
+            }
+
+            if (moveMode && client.currentScreen == null) {
+                boolean changed = false;
+                long handle = client.getWindow().getHandle();
+
+                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_LEFT)) {
+                    CONFIG.hudX = Math.max(0, AuctionHud.getX() - 2);
+                    changed = true;
+                }
+                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_RIGHT)) {
+                    CONFIG.hudX = Math.min(client.getWindow().getScaledWidth() - AuctionHud.WIDTH,
+                            AuctionHud.getX() + 2);
+                    changed = true;
+                }
+                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_UP)) {
+                    CONFIG.hudY = Math.max(0, CONFIG.hudY - 2);
+                    changed = true;
+                }
+                if (InputUtil.isKeyPressed(handle, GLFW.GLFW_KEY_DOWN)) {
+                    CONFIG.hudY = Math.min(client.getWindow().getScaledHeight() - AuctionHud.HEIGHT,
+                            CONFIG.hudY + 2);
+                    changed = true;
+                }
+                if (changed) CONFIG.save();
             }
         });
 
-        HudRenderCallback.EVENT.register((context, tickCounter) -> AuctionHud.render(context, STATE));
+        HudRenderCallback.EVENT.register((context, tickCounter) -> {
+            AuctionHud.render(context, STATE);
+            if (moveMode) AuctionHud.renderEditorPreview(context);
+        });
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!overlay && STATE.active) handleIncomingMessage(message.getString());
@@ -68,24 +102,24 @@ public class DonutAuctionClient implements ClientModInitializer {
         String[] parts = message.trim().split("\\s+", 2);
 
         if (parts.length < 2) {
-            sendClientMessage(client, "Usage: /auctiontime 5m  |  /auctiontime 90s  |  /auctiontime 2:30", Formatting.RED);
+            sendClientMessage(client, "Usage: /auctiontime 5m | /auctiontime 90s | /auctiontime 2:30", Formatting.RED);
             return;
         }
 
         int seconds = parseTime(parts[1]);
         if (seconds <= 0) {
-            sendClientMessage(client, "Invalid time. Use examples: 5m, 90s, or 2:30", Formatting.RED);
+            sendClientMessage(client, "Invalid time. Use 5m, 90s, or 2:30", Formatting.RED);
             return;
         }
 
         pendingTimeLimitSeconds = seconds;
-        sendClientMessage(client, "Auction time limit set to " + AuctionHud.formatTime(seconds)
-                + ". Now hold your item and press R.", Formatting.GREEN);
+        sendClientMessage(client,
+                "Auction time set to " + AuctionHud.formatTime(seconds) + ". Hold your item and press R.",
+                Formatting.GREEN);
     }
 
     private static int parseTime(String input) {
         String value = input.trim().toLowerCase(Locale.ROOT);
-
         try {
             if (value.matches("\\d+:[0-5]\\d")) {
                 String[] split = value.split(":");
@@ -95,7 +129,6 @@ public class DonutAuctionClient implements ClientModInitializer {
             if (value.endsWith("s")) return Integer.parseInt(value.substring(0, value.length() - 1));
             if (value.matches("\\d+")) return Integer.parseInt(value);
         } catch (NumberFormatException ignored) {}
-
         return 0;
     }
 
@@ -108,9 +141,7 @@ public class DonutAuctionClient implements ClientModInitializer {
         }
 
         if (pendingTimeLimitSeconds <= 0) {
-            sendClientMessage(client,
-                    "Set a time first: /auctiontime 5m (or 90s / 2:30)",
-                    Formatting.RED);
+            sendClientMessage(client, "Set a time first: /auctiontime 5m", Formatting.RED);
             return;
         }
 
@@ -133,8 +164,7 @@ public class DonutAuctionClient implements ClientModInitializer {
 
         String message = STATE.highestBidder == null
                 ? reason + " No bids."
-                : reason + " Highest bid: $" + fmt(STATE.highestBid)
-                + " by " + STATE.highestBidder;
+                : reason + " Highest bid: $" + fmt(STATE.highestBid) + " by " + STATE.highestBidder;
 
         STATE.stop();
         sendClientMessage(client, message, Formatting.GOLD);
@@ -144,17 +174,14 @@ public class DonutAuctionClient implements ClientModInitializer {
         PaymentParser.Result result = PaymentParser.tryParse(text, CONFIG.regex);
         if (result == null || !STATE.registerBid(result.name, result.amount)) return;
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        sendClientMessage(client,
+        sendClientMessage(MinecraftClient.getInstance(),
                 "New highest bid: $" + fmt(result.amount) + " by " + result.name,
                 Formatting.GREEN);
     }
 
     private static void sendClientMessage(MinecraftClient client, String message, Formatting formatting) {
-        if (client.player != null) {
-            client.player.sendMessage(
-                    Text.literal("[Auction] " + message).formatted(formatting), false);
-        }
+        if (client.player != null)
+            client.player.sendMessage(Text.literal("[Auction] " + message).formatted(formatting), false);
     }
 
     private static String fmt(double amount) {
