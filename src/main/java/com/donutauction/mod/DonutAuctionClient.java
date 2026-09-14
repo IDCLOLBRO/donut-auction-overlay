@@ -4,7 +4,6 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
@@ -20,10 +19,7 @@ public class DonutAuctionClient implements ClientModInitializer {
     public static AuctionConfig CONFIG;
 
     private static KeyBinding toggleKey;
-    private static KeyBinding moveKey;
-    private static boolean moveMode = false;
-    private static int pendingTimeLimitSeconds = 0;
-
+    private static KeyBinding settingsKey;
     private static final KeyBinding.Category CATEGORY = KeyBinding.Category.MISC;
 
     @Override
@@ -33,8 +29,8 @@ public class DonutAuctionClient implements ClientModInitializer {
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.donutauction.toggle", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY));
 
-        moveKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.donutauction.move", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G, CATEGORY));
+        settingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.donutauction.settings", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G, CATEGORY));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             STATE.tick();
@@ -43,91 +39,22 @@ public class DonutAuctionClient implements ClientModInitializer {
 
             while (toggleKey.wasPressed()) handleToggle(client);
 
-            while (moveKey.wasPressed()) {
-                moveMode = !moveMode;
-                CONFIG.save();
-                sendClientMessage(client,
-                        moveMode
-                                ? "Move mode ON — use the arrow keys to move the overlay, then press G to save."
-                                : "Overlay position saved.",
-                        moveMode ? Formatting.AQUA : Formatting.GREEN);
-            }
-
-            if (moveMode && client.currentScreen == null) {
-                boolean changed = false;
-                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_LEFT)) {
-                    CONFIG.hudX = Math.max(0, AuctionHud.getX() - 2);
-                    changed = true;
+            while (settingsKey.wasPressed()) {
+                if (client.currentScreen instanceof AuctionSettingsScreen) {
+                    client.setScreen(null);
+                } else {
+                    client.setScreen(new AuctionSettingsScreen());
                 }
-                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_RIGHT)) {
-                    CONFIG.hudX = Math.min(client.getWindow().getScaledWidth() - AuctionHud.WIDTH,
-                            AuctionHud.getX() + 2);
-                    changed = true;
-                }
-                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_UP)) {
-                    CONFIG.hudY = Math.max(0, CONFIG.hudY - 2);
-                    changed = true;
-                }
-                if (InputUtil.isKeyPressed(client.getWindow(), GLFW.GLFW_KEY_DOWN)) {
-                    CONFIG.hudY = Math.min(client.getWindow().getScaledHeight() - AuctionHud.HEIGHT,
-                            CONFIG.hudY + 2);
-                    changed = true;
-                }
-                if (changed) CONFIG.save();
             }
         });
 
         HudRenderCallback.EVENT.register((context, tickCounter) -> {
-            AuctionHud.render(context, STATE);
-            if (moveMode) AuctionHud.renderEditorPreview(context);
+            if (CONFIG.overlayVisible) AuctionHud.render(context, STATE);
         });
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!overlay && STATE.active) handleIncomingMessage(message.getString());
         });
-
-        ClientSendMessageEvents.ALLOW_CHAT.register(message -> {
-            if (message.toLowerCase(Locale.ROOT).startsWith("/auctiontime")) {
-                handleTimeCommand(message);
-                return false;
-            }
-            return true;
-        });
-    }
-
-    private static void handleTimeCommand(String message) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        String[] parts = message.trim().split("\\s+", 2);
-
-        if (parts.length < 2) {
-            sendClientMessage(client, "Usage: /auctiontime 5m | /auctiontime 90s | /auctiontime 2:30", Formatting.RED);
-            return;
-        }
-
-        int seconds = parseTime(parts[1]);
-        if (seconds <= 0) {
-            sendClientMessage(client, "Invalid time. Use 5m, 90s, or 2:30", Formatting.RED);
-            return;
-        }
-
-        pendingTimeLimitSeconds = seconds;
-        sendClientMessage(client,
-                "Auction time set to " + AuctionHud.formatTime(seconds) + ". Hold your item and press R.",
-                Formatting.GREEN);
-    }
-
-    private static int parseTime(String input) {
-        String value = input.trim().toLowerCase(Locale.ROOT);
-        try {
-            if (value.matches("\\d+:[0-5]\\d")) {
-                String[] split = value.split(":");
-                return Integer.parseInt(split[0]) * 60 + Integer.parseInt(split[1]);
-            }
-            if (value.endsWith("m")) return Integer.parseInt(value.substring(0, value.length() - 1)) * 60;
-            if (value.endsWith("s")) return Integer.parseInt(value.substring(0, value.length() - 1));
-            if (value.matches("\\d+")) return Integer.parseInt(value);
-        } catch (NumberFormatException ignored) {}
-        return 0;
     }
 
     private static void handleToggle(MinecraftClient client) {
@@ -138,23 +65,18 @@ public class DonutAuctionClient implements ClientModInitializer {
             return;
         }
 
-        if (pendingTimeLimitSeconds <= 0) {
-            sendClientMessage(client, "Set a time first: /auctiontime 5m", Formatting.RED);
-            return;
-        }
-
         ItemStack held = client.player.getMainHandStack();
         if (held.isEmpty()) {
             sendClientMessage(client, "Hold an item first, then press R.", Formatting.RED);
             return;
         }
 
-        STATE.start(held, pendingTimeLimitSeconds);
+        int time = CONFIG.auctionTimeSeconds;
+        STATE.start(held, time);
         sendClientMessage(client,
                 "Started " + held.getName().getString() + " for "
-                        + AuctionHud.formatTime(pendingTimeLimitSeconds) + "!",
+                        + AuctionHud.formatTime(time) + "!",
                 Formatting.GOLD);
-        pendingTimeLimitSeconds = 0;
     }
 
     private static void endAuction(MinecraftClient client, String reason) {
