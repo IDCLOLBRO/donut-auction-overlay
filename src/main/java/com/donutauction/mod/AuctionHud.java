@@ -14,11 +14,7 @@ public class AuctionHud {
 
     public static void render(DrawContext context, AuctionState state) {
         if (!state.active) return;
-        renderBox(context, state, false);
-    }
-
-    public static void renderEditorPreview(DrawContext context) {
-        renderBox(context, DonutAuctionClient.STATE, true);
+        renderBox(context, state);
     }
 
     public static int getX() {
@@ -33,15 +29,14 @@ public class AuctionHud {
         return DonutAuctionClient.CONFIG.hudY;
     }
 
-    private static void renderBox(DrawContext context, AuctionState state, boolean preview) {
+    private static void renderBox(DrawContext context, AuctionState state) {
         MinecraftClient client = MinecraftClient.getInstance();
-        if (client.player == null && !preview) return;
+        if (client.player == null) return;
 
         TextRenderer tr = client.textRenderer;
         int x = getX();
         int y = getY();
 
-        // Red/white border alternates every half second.
         boolean redPhase = (System.currentTimeMillis() / 500L) % 2L == 0L;
         int border = redPhase ? 0xFFFF2020 : 0xFFFFFFFF;
 
@@ -54,17 +49,12 @@ public class AuctionHud {
         Text title = Text.literal("AUCTION").formatted(Formatting.BOLD);
         context.drawText(tr, title, x + (WIDTH - tr.getWidth(title)) / 2, y + 6, 0xFFFFFFFF, true);
 
-        String timerText;
-        if (state.active) {
-            timerText = "TIME LEFT: " + formatTime(state.getRemainingSeconds());
-        } else {
-            timerText = "TIME LIMIT: Set with /auctiontime";
-        }
+        String timerText = "TIME LEFT: " + formatTime(state.getRemainingSeconds());
         context.drawText(tr, Text.literal(timerText).formatted(Formatting.RED, Formatting.BOLD),
                 x + (WIDTH - tr.getWidth(timerText)) / 2, y + 20, 0xFFFFFFFF, true);
 
         ItemStack stack = state.item;
-        String itemName = (!stack.isEmpty() ? stack.getName().getString() : "Hold an item to auction");
+        String itemName = !stack.isEmpty() ? stack.getName().getString() : "Hold an item to auction";
         while (tr.getWidth(itemName) > WIDTH - 18 && itemName.length() > 4) {
             itemName = itemName.substring(0, itemName.length() - 4) + "...";
         }
@@ -83,11 +73,6 @@ public class AuctionHud {
                         : "Bidder: " + state.highestBidder)
                 .formatted(Formatting.YELLOW);
         context.drawText(tr, bidder, x + 30, lineY + 15, 0xFFFFFFFF, true);
-
-        if (preview) {
-            Text hint = Text.literal("DRAG THIS BOX - ESC TO SAVE").formatted(Formatting.AQUA);
-            context.drawText(tr, hint, x + (WIDTH - tr.getWidth(hint)) / 2, y + HEIGHT + 4, 0xFFFFFFFF, true);
-        }
     }
 
     public static String formatTime(int totalSeconds) {
