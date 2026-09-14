@@ -5,6 +5,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 
 public class AuctionSettingsScreen extends Screen {
+    // Settings GUI for auction duration and overlay visibility.
     public AuctionSettingsScreen() {
         super(Text.literal("Auction Settings"));
     }
