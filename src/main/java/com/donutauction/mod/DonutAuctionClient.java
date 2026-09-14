@@ -86,8 +86,15 @@ public class DonutAuctionClient implements ClientModInitializer {
                 ? reason + " No bids."
                 : reason + " Highest bid: $" + fmt(STATE.highestBid) + " by " + STATE.highestBidder;
 
+        String winner = STATE.highestBidder;
         STATE.stop();
-        sendClientMessage(client, message, Formatting.GOLD);
+
+        if (winner != null && !winner.isBlank()) {
+            client.keyboard.setClipboard(winner);
+            sendClientMessage(client, message + " Winner copied to clipboard: " + winner, Formatting.GOLD);
+        } else {
+            sendClientMessage(client, message, Formatting.GOLD);
+        }
     }
 
     public static void handleIncomingMessage(String text) {
