@@ -16,7 +16,7 @@ public class AuctionSettingsScreen extends Screen {
         int cx = width / 2;
         int y = height / 2 - 90;
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("- 1 min"), b -> changeTime(-60)).dimensions(cx - 155, y + 80, 75, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("- 1 min"), b -> changeTime(-60)).dimensions(cx - 155, y + 105, 75, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("- 10 sec"), b -> changeTime(-10)).dimensions(cx - 75, y + 80, 75, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("+ 10 sec"), b -> changeTime(10)).dimensions(cx + 5, y + 80, 75, 20).build());
         addDrawableChild(ButtonWidget.builder(Text.literal("+ 1 min"), b -> changeTime(60)).dimensions(cx + 85, y + 80, 75, 20).build());
@@ -25,14 +25,14 @@ public class AuctionSettingsScreen extends Screen {
             DonutAuctionClient.CONFIG.overlayVisible = !DonutAuctionClient.CONFIG.overlayVisible;
             DonutAuctionClient.CONFIG.save();
             b.setMessage(overlayButtonText());
-        }).dimensions(cx - 100, y + 110, 200, 20).build());
+        }).dimensions(cx - 100, y + 135, 200, 20).build());
 
         editButton = addDrawableChild(ButtonWidget.builder(editButtonText(), b -> {
             editMode = !editMode;
             b.setMessage(editButtonText());
-        }).dimensions(cx - 100, y + 137, 200, 20).build());
+        }).dimensions(cx - 100, y + 162, 200, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> close()).dimensions(cx - 100, y + 164, 200, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> close()).dimensions(cx - 100, y + 189, 200, 20).build());
     }
 
     private void changeTime(int amount) {
@@ -51,7 +51,7 @@ public class AuctionSettingsScreen extends Screen {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0xA0000000);
-        int panelW = 360, panelH = 245, x = (width-panelW)/2, y = (height-panelH)/2-15;
+        int panelW = 360, panelH = 270, x = (width-panelW)/2, y = (height-panelH)/2-15;
         context.fill(x,y,x+panelW,y+panelH,0xEE151515);
         context.fill(x,y,x+panelW,y+2,0xFFFF2020);
         context.fill(x,y+panelH-2,x+panelW,y+panelH,0xFFFFFFFF);
@@ -65,7 +65,7 @@ public class AuctionSettingsScreen extends Screen {
 
         if (editMode) {
             handleEditKeys();
-            context.drawCenteredTextWithShadow(textRenderer,"EDIT MODE: Arrow keys move | +/- resize | M resets position",width/2,y+215,0x55FFFF);
+            context.drawCenteredTextWithShadow(textRenderer,"EDIT MODE: Arrow keys move | +/- resize | M resets position",width/2,y+240,0x55FFFF);
         }
         super.render(context,mouseX,mouseY,delta);
     }
