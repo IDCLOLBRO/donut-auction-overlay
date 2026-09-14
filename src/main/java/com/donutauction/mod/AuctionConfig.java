@@ -12,10 +12,10 @@ public class AuctionConfig {
 
     public String regex = "(?i)(?<name>[A-Za-z0-9_]{1,16})\\s+(?:has\\s+)?paid you\\s*\\$?\\s*(?<amount>[0-9][0-9,.]*[kKmMbB]?)";
     public boolean soundEnabled = true;
-
     public int hudX = -1;
     public int hudY = 12;
-
+    public int hudWidth = 240;
+    public int hudHeight = 92;
     public int auctionTimeSeconds = 300;
     public boolean overlayVisible = true;
 
@@ -23,10 +23,13 @@ public class AuctionConfig {
         if (Files.exists(PATH)) {
             try (Reader reader = Files.newBufferedReader(PATH, StandardCharsets.UTF_8)) {
                 AuctionConfig config = GSON.fromJson(reader, AuctionConfig.class);
-                if (config != null && config.regex != null) return config;
+                if (config != null && config.regex != null) {
+                    if (config.hudWidth < 160) config.hudWidth = 240;
+                    if (config.hudHeight < 70) config.hudHeight = 92;
+                    return config;
+                }
             } catch (IOException | JsonSyntaxException ignored) {}
         }
-
         AuctionConfig config = new AuctionConfig();
         config.save();
         return config;
