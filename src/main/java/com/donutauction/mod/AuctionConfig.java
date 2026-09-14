@@ -13,9 +13,11 @@ public class AuctionConfig {
     public String regex = "(?i)(?<name>[A-Za-z0-9_]{1,16})\\s+(?:has\\s+)?paid you\\s*\\$?\\s*(?<amount>[0-9][0-9,.]*[kKmMbB]?)";
     public boolean soundEnabled = true;
 
-    // -1 means centered horizontally.
     public int hudX = -1;
     public int hudY = 12;
+
+    public int auctionTimeSeconds = 300;
+    public boolean overlayVisible = true;
 
     public static AuctionConfig load() {
         if (Files.exists(PATH)) {
