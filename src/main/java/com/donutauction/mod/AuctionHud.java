@@ -32,41 +32,52 @@ public class AuctionHud {
     private static void renderBox(DrawContext context, AuctionState state) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
+
         TextRenderer tr = client.textRenderer;
         int x = getX(), y = getY(), w = getWidth(), h = getHeight();
+        float scale = Math.min((float) w / 240f, (float) h / 92f);
+        if (scale < 0.55f) scale = 0.55f;
+
         boolean redPhase = (System.currentTimeMillis() / 500L) % 2L == 0L;
         int border = redPhase ? 0xFFFF2020 : 0xFFFFFFFF;
 
         context.fill(x, y, x + w, y + h, 0xC0101010);
-        context.fill(x, y, x + w, y + 2, border);
-        context.fill(x, y + h - 2, x + w, y + h, border);
-        context.fill(x, y, x + 2, y + h, border);
-        context.fill(x + w - 2, y, x + w, y + h, border);
+        context.fill(x, y, x + w, y + Math.max(2, (int)(2 * scale)), border);
+        context.fill(x, y + h - Math.max(2, (int)(2 * scale)), x + w, y + h, border);
+        context.fill(x, y, x + Math.max(2, (int)(2 * scale)), y + h, border);
+        context.fill(x + w - Math.max(2, (int)(2 * scale)), y, x + w, y + h, border);
 
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(x, y);
+        context.getMatrices().scale(scale, scale);
+
+        int baseW = Math.max(1, (int)(w / scale));
         Text title = Text.literal("AUCTION").formatted(Formatting.BOLD);
-        context.drawText(tr, title, x + (w - tr.getWidth(title)) / 2, y + 6, 0xFFFFFFFF, true);
+        context.drawText(tr, title, (baseW - tr.getWidth(title)) / 2, 6, 0xFFFFFFFF, true);
 
         String timerText = "TIME LEFT: " + formatTime(state.getRemainingSeconds());
         context.drawText(tr, Text.literal(timerText).formatted(Formatting.RED, Formatting.BOLD),
-                x + (w - tr.getWidth(timerText)) / 2, y + 20, 0xFFFFFFFF, true);
+                (baseW - tr.getWidth(timerText)) / 2, 20, 0xFFFFFFFF, true);
 
         ItemStack stack = state.item;
         String itemName = !stack.isEmpty() ? stack.getName().getString() : "Hold an item to auction";
-        while (tr.getWidth(itemName) > w - 18 && itemName.length() > 4)
+        while (tr.getWidth(itemName) > baseW - 18 && itemName.length() > 4)
             itemName = itemName.substring(0, itemName.length() - 4) + "...";
         context.drawText(tr, Text.literal(itemName).formatted(Formatting.WHITE, Formatting.BOLD),
-                x + (w - tr.getWidth(itemName)) / 2, y + 34, 0xFFFFFFFF, true);
+                (baseW - tr.getWidth(itemName)) / 2, 34, 0xFFFFFFFF, true);
 
-        int lineY = y + 54;
-        if (!stack.isEmpty()) context.drawItem(stack, x + 8, lineY - 2);
+        int lineY = 54;
+        if (!stack.isEmpty()) context.drawItem(stack, 8, lineY - 2);
 
         Text bid = Text.literal("Highest: $" + format(state.highestBid))
                 .formatted(state.highestBidder == null ? Formatting.GRAY : Formatting.GREEN, Formatting.BOLD);
-        context.drawText(tr, bid, x + 30, lineY, 0xFFFFFFFF, true);
+        context.drawText(tr, bid, 30, lineY, 0xFFFFFFFF, true);
 
         Text bidder = Text.literal(state.highestBidder == null ? "Bidder: No bids yet" : "Bidder: " + state.highestBidder)
                 .formatted(Formatting.YELLOW);
-        context.drawText(tr, bidder, x + 30, lineY + 15, 0xFFFFFFFF, true);
+        context.drawText(tr, bidder, 30, lineY + 15, 0xFFFFFFFF, true);
+
+        context.getMatrices().popMatrix();
     }
 
     public static String formatTime(int totalSeconds) {
