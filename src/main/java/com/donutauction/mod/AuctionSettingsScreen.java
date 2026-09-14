@@ -1,43 +1,49 @@
 package com.donutauction.mod;
 
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 
 public class AuctionSettingsScreen extends Screen {
-    // Settings GUI for auction duration and overlay visibility.
+    private ButtonWidget minusMinute;
+    private ButtonWidget minusTen;
+    private ButtonWidget plusTen;
+    private ButtonWidget plusMinute;
+    private ButtonWidget overlayButton;
+
     public AuctionSettingsScreen() {
         super(Text.literal("Auction Settings"));
     }
 
     @Override
     protected void init() {
-        int centerX = width / 2;
-        int y = height / 2 - 70;
+        int cx = width / 2;
+        int y = height / 2 - 55;
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("- 1 min"), button -> changeTime(-60))
-                .dimensions(centerX - 155, y + 35, 75, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("- 10 sec"), button -> changeTime(-10))
-                .dimensions(centerX - 75, y + 35, 75, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("+ 10 sec"), button -> changeTime(10))
-                .dimensions(centerX + 5, y + 35, 75, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("+ 1 min"), button -> changeTime(60))
-                .dimensions(centerX + 85, y + 35, 75, 20).build());
+        minusMinute = addDrawableChild(ButtonWidget.builder(Text.literal("- 1 min"), b -> changeTime(-60))
+                .dimensions(cx - 155, y + 55, 75, 20).build());
+        minusTen = addDrawableChild(ButtonWidget.builder(Text.literal("- 10 sec"), b -> changeTime(-10))
+                .dimensions(cx - 75, y + 55, 75, 20).build());
+        plusTen = addDrawableChild(ButtonWidget.builder(Text.literal("+ 10 sec"), b -> changeTime(10))
+                .dimensions(cx + 5, y + 55, 75, 20).build());
+        plusMinute = addDrawableChild(ButtonWidget.builder(Text.literal("+ 1 min"), b -> changeTime(60))
+                .dimensions(cx + 85, y + 55, 75, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(overlayButtonText(), button -> {
+        overlayButton = addDrawableChild(ButtonWidget.builder(overlayButtonText(), b -> {
                     DonutAuctionClient.CONFIG.overlayVisible = !DonutAuctionClient.CONFIG.overlayVisible;
                     DonutAuctionClient.CONFIG.save();
-                    button.setMessage(overlayButtonText());
+                    overlayButton.setMessage(overlayButtonText());
                 })
-                .dimensions(centerX - 100, y + 65, 200, 20).build());
+                .dimensions(cx - 100, y + 85, 200, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), button -> close())
-                .dimensions(centerX - 100, y + 95, 200, 20).build());
+        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> close())
+                .dimensions(cx - 100, y + 112, 200, 20).build());
     }
 
     private void changeTime(int amount) {
         DonutAuctionClient.CONFIG.auctionTimeSeconds =
-                Math.max(10, Math.min(24 * 60 * 60,
+                Math.max(10, Math.min(86400,
                         DonutAuctionClient.CONFIG.auctionTimeSeconds + amount));
         DonutAuctionClient.CONFIG.save();
     }
@@ -48,19 +54,34 @@ public class AuctionSettingsScreen extends Screen {
     }
 
     @Override
-    public void render(net.minecraft.client.gui.DrawContext context, int mouseX, int mouseY, float delta) {
-        renderBackground(context, mouseX, mouseY, delta);
-        super.render(context, mouseX, mouseY, delta);
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        // Explicitly draw the entire settings panel so it is visible on 1.21.11.
+        context.fill(0, 0, width, height, 0xA0000000);
 
-        String title = "AUCTION SETTINGS";
-        String time = "Auction time: "
-                + AuctionHud.formatTime(DonutAuctionClient.CONFIG.auctionTimeSeconds);
+        int panelW = 360;
+        int panelH = 190;
+        int x = (width - panelW) / 2;
+        int y = (height - panelH) / 2 - 15;
 
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, height / 2 - 62, 0xFFFFFF);
-        context.drawCenteredTextWithShadow(textRenderer, time, width / 2, height / 2 - 35, 0xFF5555);
+        context.fill(x, y, x + panelW, y + panelH, 0xEE151515);
+        context.fill(x, y, x + panelW, y + 2, 0xFFFF2020);
+        context.fill(x, y + panelH - 2, x + panelW, y + panelH, 0xFFFFFFFF);
+        context.fill(x, y, x + 2, y + panelH, 0xFFFF2020);
+        context.fill(x + panelW - 2, y, x + panelW, y + panelH, 0xFFFFFFFF);
+
         context.drawCenteredTextWithShadow(textRenderer,
-                "Use the buttons below to change the auction duration",
-                width / 2, height / 2 - 15, 0xAAAAAA);
+                "AUCTION SETTINGS", width / 2, y + 15, 0xFFFFFF);
+
+        String time = "Auction Time: "
+                + AuctionHud.formatTime(DonutAuctionClient.CONFIG.auctionTimeSeconds);
+        context.drawCenteredTextWithShadow(textRenderer,
+                time, width / 2, y + 42, 0xFF5555);
+
+        context.drawCenteredTextWithShadow(textRenderer,
+                "Adjust the time before starting your auction",
+                width / 2, y + 67, 0xAAAAAA);
+
+        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override
