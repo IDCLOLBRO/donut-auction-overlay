@@ -9,6 +9,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.ItemStack;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.lwjgl.glfw.GLFW;
@@ -25,26 +26,18 @@ public class DonutAuctionClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         CONFIG = AuctionConfig.load();
-
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.donutauction.toggle", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, CATEGORY));
-
         settingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.donutauction.settings", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_G, CATEGORY));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             STATE.tick();
-
             if (STATE.isExpired()) endAuction(client, "Time is up!");
-
             while (toggleKey.wasPressed()) handleToggle(client);
-
             while (settingsKey.wasPressed()) {
-                if (client.currentScreen instanceof AuctionSettingsScreen) {
-                    client.setScreen(null);
-                } else {
-                    client.setScreen(new AuctionSettingsScreen());
-                }
+                if (client.currentScreen instanceof AuctionSettingsScreen) client.setScreen(null);
+                else client.setScreen(new AuctionSettingsScreen());
             }
         });
 
@@ -59,11 +52,7 @@ public class DonutAuctionClient implements ClientModInitializer {
 
     private static void handleToggle(MinecraftClient client) {
         if (client.player == null) return;
-
-        if (STATE.active) {
-            endAuction(client, "Auction ended!");
-            return;
-        }
+        if (STATE.active) { endAuction(client, "Auction ended!"); return; }
 
         ItemStack held = client.player.getMainHandStack();
         if (held.isEmpty()) {
@@ -73,10 +62,8 @@ public class DonutAuctionClient implements ClientModInitializer {
 
         int time = CONFIG.auctionTimeSeconds;
         STATE.start(held, time);
-        sendClientMessage(client,
-                "Started " + held.getName().getString() + " for "
-                        + AuctionHud.formatTime(time) + "!",
-                Formatting.GOLD);
+        sendClientMessage(client, "Started " + held.getName().getString() + " for "
+                + AuctionHud.formatTime(time) + "!", Formatting.GOLD);
     }
 
     private static void endAuction(MinecraftClient client, String reason) {
@@ -85,12 +72,14 @@ public class DonutAuctionClient implements ClientModInitializer {
         String message = STATE.highestBidder == null
                 ? reason + " No bids."
                 : reason + " Highest bid: $" + fmt(STATE.highestBid) + " by " + STATE.highestBidder;
-
         String winner = STATE.highestBidder;
         STATE.stop();
 
         if (winner != null && !winner.isBlank()) {
             client.keyboard.setClipboard(winner);
+            if (client.player != null) {
+                client.player.playSound(SoundEvents.ENTITY_PLAYER_LEVELUP, 1.0F, 1.0F);
+            }
             sendClientMessage(client, message + " Winner copied to clipboard: " + winner, Formatting.GOLD);
         } else {
             sendClientMessage(client, message, Formatting.GOLD);
@@ -100,10 +89,8 @@ public class DonutAuctionClient implements ClientModInitializer {
     public static void handleIncomingMessage(String text) {
         PaymentParser.Result result = PaymentParser.tryParse(text, CONFIG.regex);
         if (result == null || !STATE.registerBid(result.name, result.amount)) return;
-
         sendClientMessage(MinecraftClient.getInstance(),
-                "New highest bid: $" + fmt(result.amount) + " by " + result.name,
-                Formatting.GREEN);
+                "New highest bid: $" + fmt(result.amount) + " by " + result.name, Formatting.GREEN);
     }
 
     private static void sendClientMessage(MinecraftClient client, String message, Formatting formatting) {
