@@ -19,6 +19,12 @@ public class PaymentParser {
             if (!matcher.find()) return null;
 
             String name = matcher.group("name");
+            // DonutSMP Bedrock players are represented with a leading '.' in chat.
+            // The old/default regex may start matching after the dot, so restore it.
+            if (matcher.start("name") > 0 && plainMessage.charAt(matcher.start("name") - 1) == '.') {
+                name = "." + name;
+            }
+
             String raw = matcher.group("amount");
             Double amount = parseAmount(raw);
             return amount == null ? null : new Result(name, amount);
